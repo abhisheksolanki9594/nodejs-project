@@ -1,10 +1,11 @@
 const db = require("../models");
-const task_model = db.tasks_module.task_list;
-const sub_task_detail = db.tasks_module.sub_task_detail;
+const task_model = db.tasks_module.task;
+const task_items_model = db.tasks_module.task_items;
+const task_details_model = db.tasks_module.task_details;
 const Op = db.Sequelize.Op;
 
 // Create and Save a new Task
-exports.create = (req, res) => {
+exports.createTask = (req, res) => {
     if (!req.body.taskDate || !req.body.isActive) {
         res.status(400).send({
             message: "Content can not be empty!",
@@ -32,15 +33,15 @@ exports.create = (req, res) => {
 };
 
 // Retrieve all Task from the database.
-exports.findAll = (req, res) => {
+exports.findAllTask = (req, res) => {
     var condition = { isActive: 1 };
 
     task_model
         .findAll({
             where: condition,
             include: {
-                model: sub_task_detail,
-                as: "subTaskDetails",
+                model: task_items_model,
+                as: "task_items",
                 required: true,
             },
         })
@@ -54,7 +55,8 @@ exports.findAll = (req, res) => {
         });
 };
 
-exports.createSubTask = (req, res) => {
+// task_item
+exports.createTaskItem = (req, res) => {
     if (!req.body.taskTitle || !req.body.taskIsCompleted || !req.body.taskId) {
         res.status(400).send({
             message: "Content can not be empty!",
@@ -62,35 +64,97 @@ exports.createSubTask = (req, res) => {
         return;
     }
 
-    const subTaskDetails = {
+    const task_item = {
         taskTitle: req.body.taskTitle,
         taskIsCompleted: req.body.taskIsCompleted,
+        isActive: req.body.isActive,
         taskId: req.body.taskId,
     };
 
-    sub_task_detail
-        .create(subTaskDetails)
+    task_items_model
+        .create(task_item)
         .then((data) => {
             res.send(data);
         })
         .catch((err) => {
             res.status(500).send({
-                message: err.message || "Some error occurred while creating the Task.",
+                message: err.message || "Some error occurred while creating the Task Item.",
             });
         });
 };
 
-exports.findAllSubTask = (req, res) => {
+exports.findAllTaskItems = (req, res) => {
     var condition = { isActive: 1 };
 
-    sub_task_detail
+    task_items_model
         .findAll({ where: condition })
         .then((data) => {
             res.send({ data });
         })
         .catch((err) => {
             res.status(500).send({
-                message: err.message || "Some error occurred while retrieving tasks.",
+                message: err.message || "Some error occurred while retrieving task items.",
+            });
+        });
+};
+
+exports.createTaskDetailItem = (req, res) => {
+    if (!req.body.taskDate || !req.body.taskTitle) {
+        res.status(400).send({
+            message: "Content can not be empty!",
+        });
+        return;
+    }
+
+    const all_task_item = {
+        taskDate: req.body.taskDate,
+        taskTitle: req.body.taskTitle,
+        taskIsCompleted: req.body.taskIsCompleted,
+        isActive: req.body.isActive,
+    };
+
+    task_details_model
+        .create(all_task_item)
+        .then((data) => {
+            res.send(data);
+        })
+        .catch((err) => {
+            res.status(500).send({
+                message: err.message || "Some error occurred while creating the Task Item.",
+            });
+        });
+};
+
+exports.findAllTaskDetails = (req, res) => {
+    var condition = { isActive: 1 };
+
+    task_details_model
+        .findAll({
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "id", "taskTitle", "taskIsCompleted", "isActive"],
+                include: [
+                    [
+                        db.sequelize.literal(`(SELECT JSON_ARRAYAGG(JSON_OBJECT(
+                            'taskId', details.id,
+                            'taskDate', details.taskDate,
+                            'taskTitle', details.taskTitle,
+                            'taskIsCompleted', details.taskIsCompleted,
+                            'isActive', details.isActive))
+                        FROM task_details details
+                        WHERE details.taskDate = task_details.taskDate)`),
+                        "taskDetails",
+                    ],
+                ],
+            },
+            where: condition,
+            group: "taskDate",
+        })
+        .then((data) => {
+            res.send({ data });
+        })
+        .catch((err) => {
+            res.status(500).send({
+                message: err.message || "Some error occurred while retrieving task items.",
             });
         });
 };

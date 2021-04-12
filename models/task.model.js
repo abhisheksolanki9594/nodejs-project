@@ -1,6 +1,6 @@
 module.exports = (sequelize, Sequelize) => {
-    const task_list = sequelize.define("task_lists", {
-        taskId: {
+    const task = sequelize.define("tasks", {
+        id: {
             type: Sequelize.INTEGER,
             primaryKey: true,
             autoIncrement: true,
@@ -13,8 +13,8 @@ module.exports = (sequelize, Sequelize) => {
         },
     });
 
-    const sub_task_detail = sequelize.define("sub_task_details", {
-        subTaskId: {
+    const task_items = sequelize.define("task_items", {
+        id: {
             type: Sequelize.INTEGER,
             primaryKey: true,
             autoIncrement: true,
@@ -28,18 +28,41 @@ module.exports = (sequelize, Sequelize) => {
         isActive: {
             type: Sequelize.BOOLEAN,
         },
-        // taskId: {
-        //     type: Sequelize.INTEGER,
-        //     references: {
-        //         model: task_list,
-        //         key: "taskId",
-        //         deferrable: Sequelize.INITIALLY_IMMEDIATE,
-        //     },
-        // },
+        taskId: {
+            type: Sequelize.INTEGER,
+            references: {
+                model: task,
+                key: "id",
+                deferrable: Sequelize.INITIALLY_IMMEDIATE,
+            },
+        },
     });
 
-    // task_list.hasMany(sub_task_detail);
-    sub_task_detail.belongsTo(task_list, { targetKey: "taskId", foreignKey: "taskId" });
+    task.hasMany(task_items, { as: "task_items", foreignKey: "taskId" });
+    task_items.belongsTo(task, { foreignKey: "taskId" });
 
-    return { task_list, sub_task_detail };
+    const task_details = sequelize.define("task_details", {
+        id: {
+            type: Sequelize.INTEGER,
+            allowNull: false,
+            primaryKey: true,
+            autoIncrement: true,
+        },
+        taskDate: {
+            type: Sequelize.DATE,
+            allowNull: false,
+        },
+        taskTitle: {
+            type: Sequelize.STRING,
+            allowNull: false,
+        },
+        taskIsCompleted: {
+            type: Sequelize.BOOLEAN,
+        },
+        isActive: {
+            type: Sequelize.BOOLEAN,
+        },
+    });
+
+    return { task, task_items, task_details };
 };
